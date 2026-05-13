@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Env & secrets — NEVER commit API keys
+.env
+.env.*
+!.env.example
+configs/secrets.*
+
+# Data (too large for git; recreate from downloader)
+data/raw/
+data/processed/
+*.parquet
+*.csv
+*.db
+*.duckdb
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
