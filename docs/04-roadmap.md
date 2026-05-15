@@ -10,15 +10,16 @@
 - [x] EMA 크로스 베이스라인
 - [x] 합성 데이터 스모크 테스트
 
-## Stage 2 — 전략 다양화 ⬜
+## Stage 2 — 전략 다양화 🟡 (진행 중)
 
 목표: 비교 가능한 전략 3개 이상.
 
-- [ ] **변동성 돌파** (Larry Williams) — 전일 변동성 × k 돌파 시 진입
-- [ ] **RSI 평균회귀** — RSI<30 매수, >70 청산
+- [x] **변동성 돌파** (Larry Williams) — rolling 변동성 × k 돌파 시 진입
+- [x] **RSI 평균회귀** — 상태머신 (oversold → long → exit_level → flat)
+- [x] 전략 레지스트리 (`registry.build(name, **params)`)
+- [x] 전략 비교 리포트 (`mm compare`)
 - [ ] **볼린저 밴드 + ATR 손절**
 - [ ] 백테스트 결과 시각화 (equity curve, drawdown, monthly returns 히트맵)
-- [ ] 전략 비교 리포트 (`mm compare`)
 
 ## Stage 3 — 견고성 검증 ⬜
 
