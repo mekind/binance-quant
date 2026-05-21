@@ -31,3 +31,6 @@ data/processed/
 # Logs
 logs/
 *.log
+
+# OMC runtime
+.omc/
