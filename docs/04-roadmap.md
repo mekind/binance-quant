@@ -30,15 +30,16 @@
 - [x] **Monte Carlo 셔플** — 리턴 순서 섞어 무작위 대비 우위 확인 (`mm mc`)
 - [x] **거래비용 민감도** — fee 스윕 (`mm feesweep`)
 
-## Stage 4 — 실시간 인프라 ⬜
+## Stage 4 — 실시간 인프라 ✅
 
 여기서부터 위험 영역. **무조건 Testnet부터.**
 
-- [ ] Binance WebSocket 클라이언트 (kline, depth, trades 스트림)
-- [ ] 실시간 시그널 엔진 — 봉 종가 확정 시 strategy 호출
-- [ ] **페이퍼 트레이더** — Binance Testnet에 실제 주문 (실돈 X)
-- [ ] 주문 상태 머신 (NEW → PARTIALLY_FILLED → FILLED → CLOSED)
-- [ ] 재연결/이중화 (WebSocket 끊김 처리)
+- [x] Binance kline WebSocket 클라이언트 — `kline_stream` 비동기 제너레이터
+- [x] 재연결/이중화 — 지수 백오프 (1s → 60s), CancelledError 정상 전파
+- [x] 실시간 시그널 엔진 (`SignalEngine`) — 봉 종가 확정 시 strategy 호출, 포지션 변경 시만 emit
+- [x] 주문 상태 머신 (NEW → PARTIALLY_FILLED → FILLED, CANCELED, REJECTED) — 불변 dataclass
+- [x] **페이퍼 트레이더** (`PaperExecutor`) — SimulatedRouter / BinanceTestnetRouter, Trade 원장
+- [x] `mm live` CLI — strategy/symbol/interval/router 선택
 
 ## Stage 5 — 리스크 매니저 ⬜
 

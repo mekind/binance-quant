@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 
@@ -14,6 +15,9 @@ from money_maker.backtest.engine import run_backtest
 from money_maker.backtest.plots import save_report
 from money_maker.config import settings
 from money_maker.data.downloader import download_klines, load_klines
+from money_maker.live.paper_executor import PaperExecutor
+from money_maker.live.router import SimulatedRouter
+from money_maker.live.runner import run_live
 from money_maker.strategies import registry
 from money_maker.validation import (
     fee_sweep,
@@ -250,6 +254,53 @@ def feesweep(
     result = fee_sweep(df, strategy, fees=fee_list, params=_parse_params(params))
     console.print(f"[bold]{strategy}[/bold] fee sweep")
     console.print(result.to_string(index=False))
+
+
+@app.command()
+def live(
+    strategy: str = typer.Option("ema_cross", help=f"One of: {registry.list_names()}"),
+    symbol: str = typer.Option(None),
+    interval: str = typer.Option(None),
+    params: str = typer.Option(None, help="e.g. 'fast=12,slow=26' or JSON"),
+    router: str = typer.Option(
+        "sim",
+        help="'sim' = SimulatedRouter (no network), 'testnet' = Binance Testnet REST",
+    ),
+    warmup_bars: int = typer.Option(50),
+):
+    """Run the live pipeline (WS → strategy → paper executor). Ctrl-C to stop."""
+    symbol = symbol or settings.default_symbol
+    interval = interval or settings.default_interval
+
+    strat = registry.build(strategy, **_parse_params(params))
+
+    if router == "sim":
+        order_router = SimulatedRouter()
+    elif router == "testnet":
+        from money_maker.live.testnet_router import BinanceTestnetRouter
+        order_router = BinanceTestnetRouter(
+            api_key=settings.binance_api_key,
+            api_secret=settings.binance_api_secret,
+            testnet=settings.binance_testnet,
+        )
+    else:
+        raise typer.BadParameter(f"unknown router '{router}'")
+
+    executor = PaperExecutor(router=order_router, max_position_usdt=settings.max_position_usdt)
+    console.print(
+        f"[bold]live[/bold] strategy={strat.name} {symbol} {interval} "
+        f"router={router} max_pos=${settings.max_position_usdt:.0f}"
+    )
+    try:
+        asyncio.run(run_live(
+            strat, symbol, interval, executor,
+            testnet=settings.binance_testnet, warmup_bars=warmup_bars,
+        ))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]stopped by user[/yellow]")
+        console.print(
+            f"trades={len(executor.trades)}  realized_pnl={executor.realized_pnl():+.2f} USDT"
+        )
 
 
 @app.command()
