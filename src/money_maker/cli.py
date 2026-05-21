@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from money_maker.backtest.engine import run_backtest
+from money_maker.backtest.plots import save_report
 from money_maker.config import settings
 from money_maker.data.downloader import download_klines, load_klines
 from money_maker.strategies import registry
@@ -64,6 +65,7 @@ def backtest(
     interval: str = typer.Option(None),
     params: str = typer.Option(None, help="e.g. 'fast=12,slow=26' or JSON"),
     fee: float = typer.Option(0.001, help="Per-side fee, default 0.1% taker"),
+    plot_dir: str = typer.Option(None, help="If set, save equity/drawdown/monthly PNG here"),
 ):
     """Run a strategy against downloaded data."""
     symbol = symbol or settings.default_symbol
@@ -77,6 +79,9 @@ def backtest(
     console.print(f"[bold]{strat.name}[/bold] on {symbol} {interval}")
     console.print(f"  bars: {len(df):,}  range: {df.index[0]} → {df.index[-1]}")
     console.print(f"  {result.summary()}")
+    if plot_dir:
+        path = save_report(result, plot_dir, title=f"{strat.name}_{symbol}_{interval}")
+        console.print(f"  [green]plot[/green] {path}")
 
 
 @app.command()
@@ -84,6 +89,7 @@ def compare(
     symbol: str = typer.Option(None),
     interval: str = typer.Option(None),
     fee: float = typer.Option(0.001),
+    plot_dir: str = typer.Option(None, help="If set, save one PNG per strategy here"),
 ):
     """Run every registered strategy on the same data and tabulate results."""
     symbol = symbol or settings.default_symbol
@@ -107,8 +113,12 @@ def compare(
             f"{r.max_drawdown:.2%}",
             f"{r.win_rate:.2%}",
         )
+        if plot_dir:
+            save_report(r, plot_dir, title=f"{name}_{symbol}_{interval}")
 
     console.print(table)
+    if plot_dir:
+        console.print(f"  [green]plots saved to[/green] {plot_dir}")
 
 
 @app.command()

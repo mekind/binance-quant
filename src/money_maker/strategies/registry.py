@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from .base import Strategy
+from .bbands_atr import BBandsAtr
 from .ema_cross import EmaCross
 from .rsi_mr import RsiMeanReversion
 from .vol_breakout import VolBreakout
@@ -13,6 +14,7 @@ REGISTRY: dict[str, Callable[..., Strategy]] = {
     EmaCross.name: EmaCross,
     VolBreakout.name: VolBreakout,
     RsiMeanReversion.name: RsiMeanReversion,
+    BBandsAtr.name: BBandsAtr,
 }
 
 

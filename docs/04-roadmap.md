@@ -10,7 +10,7 @@
 - [x] EMA 크로스 베이스라인
 - [x] 합성 데이터 스모크 테스트
 
-## Stage 2 — 전략 다양화 🟡 (진행 중)
+## Stage 2 — 전략 다양화 ✅
 
 목표: 비교 가능한 전략 3개 이상.
 
@@ -18,8 +18,8 @@
 - [x] **RSI 평균회귀** — 상태머신 (oversold → long → exit_level → flat)
 - [x] 전략 레지스트리 (`registry.build(name, **params)`)
 - [x] 전략 비교 리포트 (`mm compare`)
-- [ ] **볼린저 밴드 + ATR 손절**
-- [ ] 백테스트 결과 시각화 (equity curve, drawdown, monthly returns 히트맵)
+- [x] **볼린저 밴드 + ATR 손절** — 하단 밴드 진입, 중앙 회귀 또는 ATR×k 손절
+- [x] 백테스트 결과 시각화 (equity curve, drawdown, monthly returns 히트맵) — `--plot-dir`
 
 ## Stage 3 — 견고성 검증 ⬜
 

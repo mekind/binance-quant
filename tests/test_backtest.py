@@ -41,3 +41,17 @@ def test_zero_signal_is_flat():
     result = run_backtest(df, sig)
     assert result.trades == 0
     assert abs(result.total_return) < 1e-9
+
+
+def test_save_report_writes_png(tmp_path):
+    from money_maker.backtest.plots import save_report
+
+    # Use enough bars to span multiple months so the heatmap branch runs
+    df = _synthetic_ohlcv(n=5000)
+    sig = EmaCross(fast=5, slow=20).signals(df)
+    result = run_backtest(df, sig)
+
+    path = save_report(result, tmp_path, title="ema_smoke")
+    assert path.exists()
+    assert path.suffix == ".png"
+    assert path.stat().st_size > 1000  # actual figure, not an empty file
