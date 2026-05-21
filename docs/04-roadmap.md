@@ -21,14 +21,14 @@
 - [x] **볼린저 밴드 + ATR 손절** — 하단 밴드 진입, 중앙 회귀 또는 ATR×k 손절
 - [x] 백테스트 결과 시각화 (equity curve, drawdown, monthly returns 히트맵) — `--plot-dir`
 
-## Stage 3 — 견고성 검증 ⬜
+## Stage 3 — 견고성 검증 ✅
 
 단일 백테스트는 거의 항상 과적합. 진짜 통계적 우위인지 검증.
 
-- [ ] **Walk-forward 분석** — 롤링 윈도우로 train/test 반복
-- [ ] **파라미터 민감도** — 그리드 서치 + 결과 분포 (단일 최적값만 보지 말 것)
-- [ ] **Monte Carlo 셔플** — 트레이드 순서 섞어 무작위 대비 우위 확인
-- [ ] **거래비용 민감도** — fee를 0.05~0.2%로 흔들어 보고 깨지면 라이브 못 감
+- [x] **Walk-forward 분석** — 롤링 윈도우로 train/test 반복 (`mm walkforward`)
+- [x] **파라미터 민감도** — 그리드 서치 + 결과 분포 (`mm grid`)
+- [x] **Monte Carlo 셔플** — 리턴 순서 섞어 무작위 대비 우위 확인 (`mm mc`)
+- [x] **거래비용 민감도** — fee 스윕 (`mm feesweep`)
 
 ## Stage 4 — 실시간 인프라 ⬜
 
