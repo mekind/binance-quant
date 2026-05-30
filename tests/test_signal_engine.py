@@ -117,6 +117,39 @@ def test_engine_caps_buffer_at_max_bars():
     assert last_closes[0] == pytest.approx(100.0 + 30)
 
 
+def _ohlc_event(t: datetime, close: float, high: float, low: float) -> KlineEvent:
+    return KlineEvent(
+        symbol="BTCUSDT", interval="1m",
+        open_time=t, close_time=t + timedelta(minutes=1),
+        open=close, high=high, low=low, close=close,
+        volume=1.0, is_closed=True,
+    )
+
+
+def test_engine_attaches_atr_to_emitted_event():
+    # 15 bars, constant close=100 with high=101/low=99 → TR=2 each → ATR(14)=2
+    eng = SignalEngine(_ThresholdStrategy(threshold=99.0), warmup_bars=15, atr_period=14)
+    t0 = datetime(2025, 1, 1, tzinfo=UTC)
+    ev = None
+    for i in range(15):
+        ev = eng.on_kline(
+            _ohlc_event(t0 + timedelta(minutes=i), close=100.0, high=101.0, low=99.0)
+        )
+    assert ev is not None
+    assert ev.desired_position == 1
+    assert ev.atr == pytest.approx(2.0)
+
+
+def test_engine_atr_is_none_before_period_satisfied():
+    # warmup small so it emits, but fewer bars than atr_period → atr None
+    eng = SignalEngine(_ThresholdStrategy(threshold=99.0), warmup_bars=2, atr_period=14)
+    t0 = datetime(2025, 1, 1, tzinfo=UTC)
+    eng.on_kline(_ohlc_event(t0, close=100.0, high=101.0, low=99.0))
+    ev = eng.on_kline(_ohlc_event(t0 + timedelta(minutes=1), close=100.0, high=101.0, low=99.0))
+    assert ev is not None
+    assert ev.atr is None
+
+
 def test_engine_integrates_with_real_strategy():
     """Smoke test against the actual EMA-cross strategy from the registry."""
     from money_maker.strategies.ema_cross import EmaCross

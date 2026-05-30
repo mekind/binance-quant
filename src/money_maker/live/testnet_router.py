@@ -77,6 +77,27 @@ class BinanceTestnetRouter:
         resp.raise_for_status()
         return resp.json()
 
+    async def _signed_get(self, path: str, params: dict | None = None) -> dict:
+        params = {**(params or {}), "timestamp": int(time.time() * 1000),
+                  "recvWindow": self.recv_window}
+        query = urlencode(params)
+        params["signature"] = _sign(self.api_secret, query)
+        resp = await self.client.get(
+            f"{self.base}{path}",
+            params=params,
+            headers={"X-MBX-APIKEY": self.api_key},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_free_balance(self, asset: str) -> float:
+        """Free (available) balance of `asset` from GET /api/v3/account."""
+        payload = await self._signed_get("/api/v3/account")
+        for b in payload.get("balances", []):
+            if b["asset"] == asset:
+                return float(b["free"])
+        return 0.0
+
     async def _market_order(
         self,
         symbol: str,

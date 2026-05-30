@@ -22,6 +22,7 @@ from .orders import Order, OrderStatus, apply_fill
 class OrderRouter(Protocol):
     async def buy(self, symbol: str, quote_qty: float, ref_price: float) -> Order: ...
     async def sell(self, symbol: str, base_qty: float, ref_price: float) -> Order: ...
+    async def get_free_balance(self, asset: str) -> float: ...
 
 
 class SimulatedRouter:
@@ -30,10 +31,21 @@ class SimulatedRouter:
     Slippage/fee modeling is the backtest engine's job; the live pipeline is
     measured against an actual exchange. Here the sim only exists to drive
     end-to-end flows without network.
+
+    Tracks per-asset holdings so the kill switch (`liquidate`) can query and
+    flatten a simulated position the same way it would on Testnet. Base asset
+    is derived by stripping `quote_asset` off the symbol.
     """
 
-    def __init__(self):
+    def __init__(self, quote_asset: str = "USDT"):
         self.filled: list[Order] = []
+        self.quote_asset = quote_asset
+        self.holdings: dict[str, float] = {}
+
+    def _base_of(self, symbol: str) -> str:
+        if symbol.endswith(self.quote_asset):
+            return symbol[: -len(self.quote_asset)]
+        return symbol
 
     async def buy(self, symbol: str, quote_qty: float, ref_price: float) -> Order:
         if quote_qty <= 0 or ref_price <= 0:
@@ -48,6 +60,8 @@ class SimulatedRouter:
         )
         filled = apply_fill(order, qty, ref_price)
         self.filled.append(filled)
+        base = self._base_of(symbol)
+        self.holdings[base] = self.holdings.get(base, 0.0) + qty
         return filled
 
     async def sell(self, symbol: str, base_qty: float, ref_price: float) -> Order:
@@ -62,4 +76,9 @@ class SimulatedRouter:
         )
         filled = apply_fill(order, base_qty, ref_price)
         self.filled.append(filled)
+        base = self._base_of(symbol)
+        self.holdings[base] = self.holdings.get(base, 0.0) - base_qty
         return filled
+
+    async def get_free_balance(self, asset: str) -> float:
+        return self.holdings.get(asset, 0.0)

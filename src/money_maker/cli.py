@@ -15,7 +15,9 @@ from money_maker.backtest.engine import run_backtest
 from money_maker.backtest.plots import save_report
 from money_maker.config import settings
 from money_maker.data.downloader import download_klines, load_klines
+from money_maker.live.kill import base_asset, liquidate
 from money_maker.live.paper_executor import PaperExecutor
+from money_maker.live.risk import AtrSizer, DailyLossGuard, FixedFractionSizer, RiskManager
 from money_maker.live.router import SimulatedRouter
 from money_maker.live.runner import run_live
 from money_maker.strategies import registry
@@ -256,6 +258,20 @@ def feesweep(
     console.print(result.to_string(index=False))
 
 
+def _build_router(router: str):
+    """Construct an OrderRouter from the CLI flag. Shared by `live` and `kill`."""
+    if router == "sim":
+        return SimulatedRouter(quote_asset=settings.base_quote)
+    if router == "testnet":
+        from money_maker.live.testnet_router import BinanceTestnetRouter
+        return BinanceTestnetRouter(
+            api_key=settings.binance_api_key,
+            api_secret=settings.binance_api_secret,
+            testnet=settings.binance_testnet,
+        )
+    raise typer.BadParameter(f"unknown router '{router}'")
+
+
 @app.command()
 def live(
     strategy: str = typer.Option("ema_cross", help=f"One of: {registry.list_names()}"),
@@ -266,30 +282,39 @@ def live(
         "sim",
         help="'sim' = SimulatedRouter (no network), 'testnet' = Binance Testnet REST",
     ),
+    sizer: str = typer.Option("fixed", help="'fixed' = full budget, 'atr' = volatility-targeted"),
+    target_vol: float = typer.Option(0.005, help="ATR sizer: target per-bar volatility"),
     warmup_bars: int = typer.Option(50),
 ):
-    """Run the live pipeline (WS → strategy → paper executor). Ctrl-C to stop."""
+    """Run the live pipeline (WS → strategy → paper executor). Ctrl-C to stop.
+
+    Risk manager (position sizer + daily loss cut from MAX_DAILY_LOSS_USDT) is
+    always wired in. Pass --sizer atr for volatility-targeted position sizing.
+    """
     symbol = symbol or settings.default_symbol
     interval = interval or settings.default_interval
 
     strat = registry.build(strategy, **_parse_params(params))
+    order_router = _build_router(router)
 
-    if router == "sim":
-        order_router = SimulatedRouter()
-    elif router == "testnet":
-        from money_maker.live.testnet_router import BinanceTestnetRouter
-        order_router = BinanceTestnetRouter(
-            api_key=settings.binance_api_key,
-            api_secret=settings.binance_api_secret,
-            testnet=settings.binance_testnet,
-        )
+    if sizer == "fixed":
+        position_sizer = FixedFractionSizer(settings.max_position_usdt)
+    elif sizer == "atr":
+        position_sizer = AtrSizer(settings.max_position_usdt, target_vol_pct=target_vol)
     else:
-        raise typer.BadParameter(f"unknown router '{router}'")
+        raise typer.BadParameter(f"unknown sizer '{sizer}'")
 
-    executor = PaperExecutor(router=order_router, max_position_usdt=settings.max_position_usdt)
+    risk = RiskManager(
+        sizer=position_sizer,
+        daily_guard=DailyLossGuard(settings.max_daily_loss_usdt),
+    )
+    executor = PaperExecutor(
+        router=order_router, max_position_usdt=settings.max_position_usdt, risk=risk
+    )
     console.print(
         f"[bold]live[/bold] strategy={strat.name} {symbol} {interval} "
-        f"router={router} max_pos=${settings.max_position_usdt:.0f}"
+        f"router={router} sizer={sizer} max_pos=${settings.max_position_usdt:.0f} "
+        f"daily_loss_cut=${settings.max_daily_loss_usdt:.0f}"
     )
     try:
         asyncio.run(run_live(
@@ -297,9 +322,47 @@ def live(
             testnet=settings.binance_testnet, warmup_bars=warmup_bars,
         ))
     except KeyboardInterrupt:
+        entry_slip, exit_slip = executor.avg_slippage_bps()
         console.print("\n[yellow]stopped by user[/yellow]")
         console.print(
-            f"trades={len(executor.trades)}  realized_pnl={executor.realized_pnl():+.2f} USDT"
+            f"trades={len(executor.trades)}  realized_pnl={executor.realized_pnl():+.2f} USDT  "
+            f"avg_slip entry={entry_slip:+.1f}bps exit={exit_slip:+.1f}bps"
+        )
+
+
+@app.command()
+def kill(
+    symbol: str = typer.Option(None, help="Symbol to flatten, e.g. BTCUSDT"),
+    router: str = typer.Option("testnet", help="'testnet' or 'sim'"),
+):
+    """Panic button: market-sell the entire base-asset balance for SYMBOL.
+
+    Independent of any running bot — reconciles against the exchange, not the
+    bot's state. Stop the live runner separately (Ctrl-C).
+    """
+    symbol = symbol or settings.default_symbol
+    order_router = _build_router(router)
+    base = base_asset(symbol, settings.base_quote)
+    console.print(f"[bold red]KILL[/bold red] liquidating {base} on {symbol} (router={router})")
+
+    async def _run():
+        try:
+            order = await liquidate(
+                order_router, symbol, quote_asset=settings.base_quote, ref_price=0.0
+            )
+        finally:
+            aclose = getattr(order_router, "aclose", None)
+            if aclose is not None:
+                await aclose()
+        return order
+
+    order = asyncio.run(_run())
+    if order is None:
+        console.print("[yellow]nothing to liquidate[/yellow]")
+    else:
+        console.print(
+            f"[green]✓[/green] sold {order.filled_qty:.8f} {base} @ {order.avg_price:.2f} "
+            f"({order.status})"
         )
 
 
