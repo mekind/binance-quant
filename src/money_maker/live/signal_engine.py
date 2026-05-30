@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import pairwise
 
 import pandas as pd
 
@@ -34,17 +35,27 @@ class SignalEvent:
     symbol: str
     desired_position: int  # {0, 1}
     last_close: float
+    atr: float | None = None  # current ATR(atr_period); None until enough bars
 
 
 class SignalEngine:
-    def __init__(self, strategy: Strategy, max_bars: int = 1000, warmup_bars: int = 50):
+    def __init__(
+        self,
+        strategy: Strategy,
+        max_bars: int = 1000,
+        warmup_bars: int = 50,
+        atr_period: int = 14,
+    ):
         if max_bars < 2:
             raise ValueError("max_bars must be >= 2")
         if warmup_bars < 1:
             raise ValueError("warmup_bars must be >= 1")
+        if atr_period < 1:
+            raise ValueError("atr_period must be >= 1")
         self.strategy = strategy
         self.max_bars = max_bars
         self.warmup_bars = warmup_bars
+        self.atr_period = atr_period
         self._bars: list[dict] = []
         self._last_position: int = 0
 
@@ -99,4 +110,24 @@ class SignalEngine:
             symbol=event.symbol,
             desired_position=desired,
             last_close=event.close,
+            atr=self._current_atr(),
         )
+
+    def _current_atr(self) -> float | None:
+        """Simple-average ATR over `atr_period`. None until period+1 bars exist.
+
+        TR = max(high-low, |high-prev_close|, |low-prev_close|).
+        """
+        if len(self._bars) < self.atr_period + 1:
+            return None
+        window = self._bars[-(self.atr_period + 1) :]
+        trs: list[float] = []
+        for prev, cur in pairwise(window):
+            pc = prev["close"]
+            tr = max(
+                cur["high"] - cur["low"],
+                abs(cur["high"] - pc),
+                abs(cur["low"] - pc),
+            )
+            trs.append(tr)
+        return sum(trs) / len(trs)

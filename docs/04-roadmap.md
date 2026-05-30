@@ -41,13 +41,13 @@
 - [x] **페이퍼 트레이더** (`PaperExecutor`) — SimulatedRouter / BinanceTestnetRouter, Trade 원장
 - [x] `mm live` CLI — strategy/symbol/interval/router 선택
 
-## Stage 5 — 리스크 매니저 ⬜
+## Stage 5 — 리스크 매니저 ✅
 
-- [ ] 포지션 사이저 (고정비율 → Kelly 일부 → ATR 기반)
-- [ ] 일일 손실 컷 (`max_daily_loss_usdt` 도달 시 거래 중단)
-- [ ] 동시 포지션 한도
-- [ ] **킬 스위치** — 단일 명령으로 모든 포지션 청산
-- [ ] 체결 슬리피지 측정 (실제 fill vs 시그널 가격)
+- [x] 포지션 사이저 — 고정비율(`FixedFractionSizer`) + ATR 변동성 타게팅(`AtrSizer`). Kelly는 거래이력 통계 인프라 선행 필요로 보류
+- [x] 일일 손실 컷 (`DailyLossGuard`) — `max_daily_loss_usdt` 도달 시 신규 진입 차단, UTC 자정 자동 리셋, 청산은 항상 허용
+- [x] 동시 포지션 한도 — 단일 심볼 0/1 포지션 구조라 자명(멀티심볼은 Stage 7 이후)
+- [x] **킬 스위치** (`mm kill`) — 거래소 잔고 기준 전량 시장가 청산. 실행 중 봇과 독립
+- [x] 체결 슬리피지 측정 — `Trade.entry_slip_bps`/`exit_slip_bps` = (체결가/시그널가−1)×10⁴, `mm live` 종료 시 평균 출력
 
 ## Stage 6 — 실거래 ⬜
 
