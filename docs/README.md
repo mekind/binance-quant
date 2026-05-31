@@ -1,13 +1,15 @@
 # money-maker docs
 
-Binance spot 단타 퀀트 트레이딩 시스템 문서.
+Binance spot 스윙 퀀트 트레이딩 시스템 문서.
 
 ## 읽는 순서
 
 1. **[01-architecture.md](01-architecture.md)** — 레이어 구조, 의존 방향, 데이터 흐름
 2. **[02-modules.md](02-modules.md)** — 파일별 책임, API, 결정사항
 3. **[03-workflow.md](03-workflow.md)** — 셋업, 일상 흐름, 새 전략 추가법, 결과 해석
-4. **[04-roadmap.md](04-roadmap.md)** — 현재 위치(Stage 1), 다음 마일스톤
+4. **[04-roadmap.md](04-roadmap.md)** — 미션(스윙·실제수익·B&H 벤치마크), 스테이지, KPI
+5. **[05-service-flow.md](05-service-flow.md)** — 서비스 플로우 다이어그램 (리서치·라이브·킬스위치)
+6. **[06-why-swing-not-scalping.md](06-why-swing-not-scalping.md)** — 단타 대신 스윙을 택한 근거
 
 ## 빠른 참조
 
@@ -25,9 +27,9 @@ mm backtest --fast 12 --slow 26                   # 백테스트
 
 ## 현재 상태
 
-- **Stage 1 완료**: 오프라인 백테스트 인프라
-- **다음**: Stage 2 — 전략 다양화 (변동성 돌파, RSI 평균회귀)
-- **실거래까지**: Stage 6 (Walk-forward 검증 + Testnet 페이퍼 4주 후)
+- **미션 개정 (2026-05-31)**: 1분봉 단타 → **스윙(4h~1d) 기반 실제 수익**. 근거는 [06-why-swing-not-scalping.md](06-why-swing-not-scalping.md)
+- **구축 완료**: 백테스트·검증·실시간·리스크 인프라 (단타 기준으로 지어졌으나 타임프레임 독립적이라 재사용)
+- **현재 위치**: 새 무대에서 **재출발** — B&H 벤치마크 추가 + 다년치 데이터로 전 전략 재검증 ([04-roadmap.md](04-roadmap.md) Stage 1)
 
 ## 핵심 원칙
 
