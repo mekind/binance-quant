@@ -10,6 +10,7 @@ Binance spot 스윙 퀀트 트레이딩 시스템 문서.
 4. **[04-roadmap.md](04-roadmap.md)** — 미션(스윙·실제수익·B&H 벤치마크), 스테이지, KPI
 5. **[05-service-flow.md](05-service-flow.md)** — 서비스 플로우 다이어그램 (리서치·라이브·킬스위치)
 6. **[06-why-swing-not-scalping.md](06-why-swing-not-scalping.md)** — 단타 대신 스윙을 택한 근거
+7. **[07-how-quant-firms-work.md](07-how-quant-firms-work.md)** — 전문 퀀트 회사 운영 방식 + 우리가 채택/포기할 것
 
 ## 빠른 참조
 
